@@ -2,6 +2,7 @@
 package consolebasedjavaproject;
 
 import java.io.*;
+import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ public class ConsoleBasedJavaProject {
     private static final Logger LOG = Logger.getLogger(ConsoleBasedJavaProject.class.getName());
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd-MM-yyyy");
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         String[] csvFiles = {"Employees-csv.csv", "Employees-pipe.csv", "Employees-semicolon.csv", "Employees-tab.txt"};
         String[] delimiters = {",", "|", ";", "\t"};
         String rootLocation = "C:\\Users\\DeLL\\Desktop\\Gen Z\\Systems\\Projects\\ConsoleBasedJavaProject\\resources\\csv-files\\";
@@ -60,6 +61,7 @@ public class ConsoleBasedJavaProject {
 
         File csvFilePath = new File(rootLocation, csvFile);
         List<Employee> employees = readEmployees(csvFilePath, delimiter);
+        List<Employee> employeesDB = storeEmployees();
     }
 
     // CSV Reader
@@ -128,5 +130,61 @@ public class ConsoleBasedJavaProject {
             LOG.log(Level.SEVERE,"Error in reading file");
         }
         return employees;
+    }
+
+    private static List<Employee> storeEmployees() throws SQLException {
+        // create employee object
+        Employee employee = new Employee();
+
+        // JDBC Connection
+        String jdbcUrl = "";
+        String username = "";
+        String password = "";
+
+        int batchSize = 20;
+
+        Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+        connection.setAutoCommit(false);
+
+        // Employee table columns
+        // 1. id (auto increment)
+        // 2. firstName
+        // 3. lastName
+        // 4. arabicName
+        // 5. dob
+        // 6. gender
+        // 7. nationality
+        // 8. latestCollegeDegree
+        // 9. monthlyIncome
+
+        String sqlQuery = "insert into employees(firstName, lastName, arabicName, dob, gender, nationality, latestCollegeDegree, gpa, monthlyIncome) values(?,?,?,?,?,?,?,?,?)";
+        PreparedStatement statement = connection.prepareStatement(sqlQuery);
+
+        // retrieve employee data from object
+        statement.setString(1, employee.getFirstName());
+        statement.setString(2, employee.getLastName());
+        statement.setString(3, employee.getArabicName());
+        statement.setDate(4, (Date) employee.getDob());
+        statement.setString(5, employee.getGender());
+        statement.setString(6, employee.getNationality());
+        statement.setString(7, employee.getLatestCollegeDegree());
+        statement.setDouble(8, employee.getGpa());
+        statement.setDouble(9, employee.getMonthlyIncome());
+
+        statement.addBatch();
+
+        int count = 0;
+
+        if (count % batchSize == 0) {
+            statement.executeBatch();
+        }
+
+        statement.executeBatch();
+        connection.commit();
+        connection.close();
+
+        System.out.println("Employee data inserted successfully");
+
+        return null;
     }
 }
